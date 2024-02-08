@@ -61,6 +61,7 @@ class _HomePageState extends State<HomePage> {
     Directory? tempDir = await getExternalStorageDirectory();
     String? tempPath = tempDir!.path; // Example custom directory path
     print(tempPath);
+    print("hello");
     try {
       var startResponse = await screenRecorder?.startRecordScreen(
         fileName: fileName,
