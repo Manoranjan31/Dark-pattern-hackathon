@@ -1,4 +1,12 @@
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:dpbh/pattern_detected.dart';
 import 'package:flutter/material.dart';
+import 'package:open_file/open_file.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:pdf/widgets.dart' as pd;
+// import 'package:url_launcher/url_launcher.dart';
 
 class settings extends StatelessWidget {
   const settings({super.key});
@@ -227,11 +235,46 @@ class settings extends StatelessWidget {
           ),
         ),
         floatingActionButton: FloatingActionButton(
-            onPressed: () {},
+            onPressed: () async {
+              final pdfDoc = await makePdf();
+              // Save the PDF to a temporary file
+              final tempDir = await getTemporaryDirectory();
+              final tempPath = tempDir.path;
+              print(tempPath);
+              final pdfPath = '$tempPath/example.pdf';
+              final file = File(pdfPath);
+              await file.writeAsBytes(await pdfDoc.save());
+              // This is an unverified package soon will loose its capability in that case use url_launcher or any relavant package to show output to user.
+
+              // if (await canLaunchUrl(Uri.file(pdfPath))) {
+              //   await launchUrl(Uri.file(pdfPath));
+              // } else {
+              //   throw 'Could not launch $pdfPath';
+              // }
+
+              // but it requires specific version of compilesdk and targetsdk
+
+              OpenFile.open(pdfPath);
+            },
             backgroundColor: Colors.black,
             child: const Icon(
               Icons.download,
               color: Colors.white,
             )));
   }
+}
+
+// https://drive.google.com/drive/u/0/folders/1kKO61YY-kLMpGCq9pVwXGDHWzaiNVOSm
+
+// https://drive.google.com/uc?export=view&id=19ZczMelBH6TsIbH1nz77DF6uK2AQs8_j
+
+Future<pd.Document> makePdf() async {
+  final pdf = pd.Document();
+
+  final Uint8List imageBytes = await fetchImage(
+      "https://drive.google.com/uc?export=view&id=19ZczMelBH6TsIbH1nz77DF6uK2AQs8_j");
+  pdf.addPage(pd.Page(build: (pd.Context context) {
+    return pd.Column(children: [pd.Image(pd.MemoryImage(imageBytes))]);
+  }));
+  return pdf;
 }

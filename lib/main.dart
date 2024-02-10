@@ -6,8 +6,10 @@ import 'package:ed_screen_recorder/ed_screen_recorder.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:video_player/video_player.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
+// import 'package:permission_handler/permission_handler.dart';
 
 void main() {
   runApp(const MyApp());
@@ -42,10 +44,14 @@ class _HomePageState extends State<HomePage> {
   EdScreenRecorder? screenRecorder;
   bool inProgress = false;
 
-  var permissions = [
-    Permission.storage,
-    Permission.microphone,
-  ];
+  // var permissions = [
+  //   Permission.storage,
+  // ];
+  File? galleryFile;
+  File? videoFile;
+  final picker = ImagePicker();
+
+  late VideoPlayerController _controller;
 
   @override
   void initState() {
@@ -53,15 +59,21 @@ class _HomePageState extends State<HomePage> {
     screenRecorder = EdScreenRecorder();
   }
 
+  @override
+  void dispose() {
+    // Dispose of the VideoPlayerController when the widget is disposed
+    _controller.dispose();
+    super.dispose();
+  }
+
   Future<void> startRecord(
       {required String fileName,
       required int width,
       required int height}) async {
     // Define the custom directory path
-    Directory? tempDir = await getExternalStorageDirectory();
-    String? tempPath = tempDir!.path; // Example custom directory path
+    Directory? tempDir = await getApplicationDocumentsDirectory();
+    String? tempPath = tempDir.path; // Example custom directory path
     print(tempPath);
-    print("hello");
     try {
       var startResponse = await screenRecorder?.startRecordScreen(
         fileName: fileName,
@@ -69,6 +81,7 @@ class _HomePageState extends State<HomePage> {
         width: width,
         height: height,
       );
+      print("Hello World ,$tempPath + ${startResponse?.file}");
     } on PlatformException {
       kDebugMode
           ? debugPrint("Error: An error occurred while starting the recording!")
@@ -128,7 +141,7 @@ class _HomePageState extends State<HomePage> {
         ),
         body: Column(children: [
           const SizedBox(
-            height: 100,
+            height: 30,
           ),
           const Row(
               key: Key("Top Text"),
@@ -187,17 +200,7 @@ class _HomePageState extends State<HomePage> {
                                             foregroundColor: Colors.white),
                                         onPressed: () {
                                           setState(() async {
-                                            var permissionStatuses =
-                                                await permissions.request();
-
-                                            if (permissionStatuses[
-                                                        Permission.storage]!
-                                                    .isGranted &&
-                                                permissionStatuses[
-                                                        Permission.microphone]!
-                                                    .isGranted) {
-                                              changecapture = !changecapture;
-                                            }
+                                            changecapture = !changecapture;
                                           });
                                         },
                                         child: const Row(
@@ -286,19 +289,16 @@ class _HomePageState extends State<HomePage> {
                                           backgroundColor: Colors.black,
                                           foregroundColor: Colors.white),
                                       onPressed: () async {
-                                        var permissionStatuses =
-                                            await permissions.request();
-
+                                        // var permissionStatuses =
+                                        //     await permissions.request();
+                                        startRecord(
+                                          fileName: "dark-pattern",
+                                          width:
+                                              context.size?.width.toInt() ?? 0,
+                                          height:
+                                              context.size?.height.toInt() ?? 0,
+                                        );
                                         setState(() {
-                                          startRecord(
-                                            fileName: "dark-pattern",
-                                            width:
-                                                context.size?.width.toInt() ??
-                                                    0,
-                                            height:
-                                                context.size?.height.toInt() ??
-                                                    0,
-                                          );
                                           changerec = !changerec;
                                         });
                                       },
@@ -329,11 +329,77 @@ class _HomePageState extends State<HomePage> {
                                       style: ElevatedButton.styleFrom(
                                           backgroundColor: Colors.black,
                                           foregroundColor: Colors.white),
-                                      onPressed: () {
+                                      onPressed: () async {
+                                        stopRecord();
+
+                                        showDialog(
+                                          context: context,
+                                          barrierDismissible: false,
+                                          builder: (BuildContext context) {
+                                            // Return a dialog with circular progress indicator and message
+                                            return AlertDialog(
+                                              content: Container(
+                                                height: 200,
+                                                width: 200,
+                                                child: const Column(
+                                                  children: [
+                                                    Text(
+                                                      "Storing the video file in gallery",
+                                                      textAlign:
+                                                          TextAlign.justify,
+                                                      maxLines: 3,
+                                                      style: TextStyle(
+                                                          color: Colors.black,
+                                                          fontSize: 16,
+                                                          fontWeight:
+                                                              FontWeight.bold),
+                                                    ),
+                                                    SizedBox(height: 25),
+                                                    CircularProgressIndicator(
+                                                      color: Colors.black,
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        );
+                                        Timer(const Duration(seconds: 5), () {
+                                          // Close the dialog
+                                          Navigator.pop(context);
+
+                                          // Navigate to the next page
+                                        });
+
+                                        final pickedFile =
+                                            await picker.pickVideo(
+                                                source: ImageSource.gallery,
+                                                preferredCameraDevice:
+                                                    CameraDevice.front,
+                                                maxDuration: const Duration(
+                                                    minutes: 10));
+                                        XFile? xfilePick = pickedFile;
+
+                                        if (xfilePick != null) {
+                                          galleryFile = File(pickedFile!.path);
+                                          _controller = VideoPlayerController
+                                              .file(galleryFile!)
+                                            ..initialize().then((_) {
+                                              // Ensure the first frame is shown after the video is initialized
+                                              setState(() {});
+                                            });
+                                        } else {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                                  // is this context <<<
+                                                  const SnackBar(
+                                                      content: Text(
+                                                          'Nothing is selected')));
+                                        }
+
                                         setState(() {
                                           changerec = !changerec;
                                         });
-                                        stopRecord();
                                       },
                                       child: const Row(
                                           mainAxisSize: MainAxisSize.min,
@@ -363,6 +429,29 @@ class _HomePageState extends State<HomePage> {
           ),
           const SizedBox(
             height: 40,
+          ),
+          Container(
+            height: 150,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.white,
+            ),
+            child: galleryFile != null // Check if a video file has been picked
+                ? VideoPlayer(
+                    _controller) // Display the VideoPlayer if a file is available
+                : Center(
+                    child: Text(
+                      "No Video Available",
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+          ),
+          SizedBox(
+            height: 10,
           ),
           ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
@@ -413,7 +502,7 @@ class _HomePageState extends State<HomePage> {
                 style: TextStyle(fontSize: 16, color: Colors.black),
               )),
           const SizedBox(
-            height: 40,
+            height: 10,
           ),
           Expanded(
             child: Container(
@@ -544,3 +633,15 @@ class _HomePageState extends State<HomePage> {
     // );
   }
 }
+
+// class MediaScanner {
+//   static const MethodChannel _channel = MethodChannel('media_scanner');
+
+//   static Future<void> scanFile(String path) async {
+//     try {
+//       await _channel.invokeMethod('scanFile', {'path': path});
+//     } on PlatformException catch (e) {
+//       print("Failed to scan file: ${e.message}");
+//     }
+//   }
+// }

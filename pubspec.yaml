@@ -36,9 +36,10 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.2
   ed_screen_recorder: ^0.0.14
+  open_file: ^3.3.2
   path_provider: ^2.1.2
-  permission_handler: ^11.2.1
-  filesystem_picker: ^4.1.0
+  video_player: ^2.8.2
+  image_picker: ^1.0.7
   pdf: ^3.10.7
   printing: ^5.11.1
 
